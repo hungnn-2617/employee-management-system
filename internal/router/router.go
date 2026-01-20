@@ -2,6 +2,7 @@ package router
 
 import (
 	"employee-management-system/internal/handlers"
+	"employee-management-system/internal/middleware"
 	"net/http"
 )
 
@@ -26,22 +27,15 @@ func (router *Router) SetupRoutes() http.Handler {
 
 	mux.HandleFunc("/health", healthCheckHandler)
 
-	return corsMiddleware(mux)
-}
+	handler := middleware.Chain(
+		mux,
+		middleware.RecoverMiddleware,
+		middleware.LoggingMiddleware,
+		middleware.CORSMiddleware,
+		middleware.BasicAuthMiddleware,
+	)
 
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
+	return handler
 }
 
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
