@@ -8,6 +8,8 @@ import (
 
 type EmployeeRepository interface {
 	Create(ctx context.Context, employee *models.Employee) error
+	GetByID(ctx context.Context, id string) (*models.Employee, error)
+	Update(ctx context.Context, employee *models.Employee) error
 }
 
 type DepartmentRepository interface {

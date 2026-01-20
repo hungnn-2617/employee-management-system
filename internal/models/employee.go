@@ -21,3 +21,11 @@ type CreateEmployeeRequest struct {
 	DepartmentID string  `json:"departmentId"`
 	Salary       float64 `json:"salary"`
 }
+
+type UpdateEmployeeRequest struct {
+	Name         *string  `json:"name,omitempty"`
+	Age          *int     `json:"age,omitempty"`
+	Position     *string  `json:"position,omitempty"`
+	DepartmentID *string  `json:"departmentId,omitempty"`
+	Salary       *float64 `json:"salary,omitempty"`
+}
