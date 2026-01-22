@@ -39,5 +39,5 @@ docker-compose up -d
 5. Run the application:
 
 ```bash
-go run internal/cmd/app/main.go
+go run cmd/app/main.go
 ```
