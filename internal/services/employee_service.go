@@ -170,3 +170,49 @@ func (s *EmployeeService) GetAll(ctx context.Context, filter models.EmployeeFilt
 		Employees:  employees,
 	}, nil
 }
+
+func (s *EmployeeService) Delete(ctx context.Context, id string) error {
+	ctx, cancel := context.WithTimeout(ctx, config.ContextTimeout)
+	defer cancel()
+
+	if id == "" {
+		return utils.ErrInvalidID
+	}
+
+	// Check if employee exists
+	employee, err := s.employeeRepo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if employee == nil {
+		return ErrEmployeeNotFound
+	}
+
+	return s.employeeRepo.Delete(ctx, id)
+}
+
+func (s *EmployeeService) Search(ctx context.Context, keyword string, limit, offset int) (*models.EmployeeListResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.ContextTimeout)
+	defer cancel()
+
+	// Set default pagination values
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	employees, totalCount, err := s.employeeRepo.Search(ctx, keyword, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.EmployeeListResponse{
+		TotalCount: totalCount,
+		Employees:  employees,
+	}, nil
+}
