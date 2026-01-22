@@ -6,6 +6,7 @@ import (
 	"employee-management-system/internal/utils"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -24,6 +25,8 @@ func (h *EmployeeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path = strings.TrimSuffix(path, "/")
 
 	switch {
+	case path == "" && r.Method == http.MethodGet:
+		h.GetAll(w, r)
 	case path == "" && r.Method == http.MethodPost:
 		h.Create(w, r)
 	case strings.HasPrefix(path, "/") && r.Method == http.MethodGet:
@@ -105,4 +108,27 @@ func (h *EmployeeHandler) Update(w http.ResponseWriter, r *http.Request, id stri
 	}
 
 	utils.WriteJSON(w, http.StatusOK, employee)
+}
+
+// GetAll handles GET /employees
+func (h *EmployeeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	offset, _ := strconv.Atoi(query.Get("offset"))
+	departmentID := query.Get("departmentId")
+
+	filter := models.EmployeeFilter{
+		DepartmentID: departmentID,
+		Limit:        limit,
+		Offset:       offset,
+	}
+
+	response, err := h.employeeService.GetAll(r.Context(), filter)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, "Failed to get employees")
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, response)
 }
