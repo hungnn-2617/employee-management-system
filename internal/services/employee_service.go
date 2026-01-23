@@ -66,7 +66,6 @@ func (s *EmployeeService) Create(ctx context.Context, req *models.CreateEmployee
 	return employee, nil
 }
 
-
 func (s *EmployeeService) GetByID(ctx context.Context, id string) (*models.Employee, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.ContextTimeout)
 	defer cancel()
@@ -140,4 +139,34 @@ func (s *EmployeeService) Update(ctx context.Context, id string, req *models.Upd
 	}
 
 	return employee, nil
+}
+
+func (s *EmployeeService) GetAll(ctx context.Context, filter models.EmployeeFilter) (*models.EmployeeListResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.ContextTimeout)
+	defer cancel()
+
+	if filter.Limit <= 0 {
+		filter.Limit = 10
+	}
+	if filter.Limit > 100 {
+		filter.Limit = 100
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+
+	employees, err := s.employeeRepo.GetAll(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	totalCount, err := s.employeeRepo.Count(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.EmployeeListResponse{
+		TotalCount: totalCount,
+		Employees:  employees,
+	}, nil
 }

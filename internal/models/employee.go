@@ -29,3 +29,15 @@ type UpdateEmployeeRequest struct {
 	DepartmentID *string  `json:"departmentId,omitempty"`
 	Salary       *float64 `json:"salary,omitempty"`
 }
+
+type EmployeeListResponse struct {
+	TotalCount int64       `json:"totalCount"`
+	Employees  []*Employee `json:"employees"`
+}
+
+type EmployeeFilter struct {
+	DepartmentID string
+	Keyword      string
+	Limit        int
+	Offset       int
+}

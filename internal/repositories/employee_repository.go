@@ -116,3 +116,131 @@ func (r *MySQLEmployeeRepository) GetByID(ctx context.Context, id string) (*mode
 
 	return employee, nil
 }
+
+func (r *MySQLEmployeeRepository) Search(ctx context.Context, keyword string, limit, offset int) ([]*models.Employee, int64, error) {
+	// Count query
+	countQuery := `
+		SELECT COUNT(*)
+		FROM employees
+		WHERE deleted_at IS NULL AND (name LIKE ? OR position LIKE ?)
+	`
+	searchPattern := "%" + keyword + "%"
+
+	var totalCount int64
+	err := r.db.QueryRowContext(ctx, countQuery, searchPattern, searchPattern).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count search results: %w", err)
+	}
+
+	// Search query
+	query := `
+		SELECT id, name, age, position, department_id, salary, created_at, updated_at, deleted_at
+		FROM employees
+		WHERE deleted_at IS NULL AND (name LIKE ? OR position LIKE ?)
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, searchPattern, searchPattern, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to search employees: %w", err)
+	}
+	defer rows.Close()
+
+	var employees []*models.Employee
+	for rows.Next() {
+		employee := &models.Employee{}
+		err := rows.Scan(
+			&employee.ID,
+			&employee.Name,
+			&employee.Age,
+			&employee.Position,
+			&employee.DepartmentID,
+			&employee.Salary,
+			&employee.CreatedAt,
+			&employee.UpdatedAt,
+			&employee.DeletedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan employee: %w", err)
+		}
+		employees = append(employees, employee)
+	}
+
+	return employees, totalCount, nil
+}
+
+func (r *MySQLEmployeeRepository) GetAll(ctx context.Context, filter models.EmployeeFilter) ([]*models.Employee, error) {
+	query := `
+		SELECT id, name, age, position, department_id, salary, created_at, updated_at, deleted_at
+		FROM employees
+		WHERE deleted_at IS NULL
+	`
+	args := []interface{}{}
+
+	if filter.DepartmentID != "" {
+		query += " AND department_id = ?"
+		args = append(args, filter.DepartmentID)
+	}
+
+	query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	args = append(args, filter.Limit, filter.Offset)
+
+	stmt, err := r.db.PrepareContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.QueryContext(ctx, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query employees: %w", err)
+	}
+	defer rows.Close()
+
+	var employees []*models.Employee
+	for rows.Next() {
+		employee := &models.Employee{}
+		err := rows.Scan(
+			&employee.ID,
+			&employee.Name,
+			&employee.Age,
+			&employee.Position,
+			&employee.DepartmentID,
+			&employee.Salary,
+			&employee.CreatedAt,
+			&employee.UpdatedAt,
+			&employee.DeletedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan employee: %w", err)
+		}
+		employees = append(employees, employee)
+	}
+
+	return employees, nil
+}
+
+func (r *MySQLEmployeeRepository) Count(ctx context.Context, filter models.EmployeeFilter) (int64, error) {
+	query := `SELECT COUNT(*) FROM employees WHERE deleted_at IS NULL`
+	args := []interface{}{}
+
+	if filter.DepartmentID != "" {
+		query += " AND department_id = ?"
+		args = append(args, filter.DepartmentID)
+	}
+
+	stmt, err := r.db.PrepareContext(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	var count int64
+	err = stmt.QueryRowContext(ctx, args...).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count employees: %w", err)
+	}
+
+	return count, nil
+}
