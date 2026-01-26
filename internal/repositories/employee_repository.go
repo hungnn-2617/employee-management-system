@@ -244,3 +244,29 @@ func (r *MySQLEmployeeRepository) Count(ctx context.Context, filter models.Emplo
 
 	return count, nil
 }
+
+func (r *MySQLEmployeeRepository) Delete(ctx context.Context, id string) error {
+	query := `UPDATE employees SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL`
+
+	stmt, err := r.db.PrepareContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	result, err := stmt.ExecContext(ctx, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to delete employee: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("employee not found or already deleted")
+	}
+
+	return nil
+}

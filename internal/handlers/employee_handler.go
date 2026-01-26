@@ -29,10 +29,14 @@ func (h *EmployeeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.GetAll(w, r)
 	case path == "" && r.Method == http.MethodPost:
 		h.Create(w, r)
+	case path == "/search" && r.Method == http.MethodGet:
+		h.Search(w, r)
 	case strings.HasPrefix(path, "/") && r.Method == http.MethodGet:
 		h.GetByID(w, r, strings.TrimPrefix(path, "/"))
 	case strings.HasPrefix(path, "/") && r.Method == http.MethodPut:
 		h.Update(w, r, strings.TrimPrefix(path, "/"))
+	case strings.HasPrefix(path, "/") && r.Method == http.MethodDelete:
+		h.Delete(w, r, strings.TrimPrefix(path, "/"))
 	default:
 		utils.WriteError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
@@ -127,6 +131,40 @@ func (h *EmployeeHandler) GetAll(w http.ResponseWriter, r *http.Request) {
 	response, err := h.employeeService.GetAll(r.Context(), filter)
 	if err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, "Failed to get employees")
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, response)
+}
+
+// Delete handles DELETE /employees/:id
+func (h *EmployeeHandler) Delete(w http.ResponseWriter, r *http.Request, id string) {
+	err := h.employeeService.Delete(r.Context(), id)
+	if err != nil {
+		switch err {
+		case services.ErrEmployeeNotFound:
+			utils.WriteError(w, http.StatusNotFound, "Employee not found")
+		case utils.ErrInvalidID:
+			utils.WriteError(w, http.StatusBadRequest, "Invalid employee ID")
+		default:
+			utils.WriteError(w, http.StatusInternalServerError, "Failed to delete employee")
+		}
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, map[string]string{"message": "Employee deleted successfully"})
+}
+
+// Search handles GET /employees/search
+func (h *EmployeeHandler) Search(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	keyword := query.Get("keyword")
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	offset, _ := strconv.Atoi(query.Get("offset"))
+
+	response, err := h.employeeService.Search(r.Context(), keyword, limit, offset)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, "Failed to search employees")
 		return
 	}
 
