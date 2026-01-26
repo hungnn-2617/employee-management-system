@@ -270,3 +270,49 @@ func (r *MySQLEmployeeRepository) Delete(ctx context.Context, id string) error {
 
 	return nil
 }
+
+func (r *MySQLEmployeeRepository) GetByDepartmentID(ctx context.Context, departmentID string, limit, offset int) ([]*models.Employee, int64, error) {
+	countQuery := `SELECT COUNT(*) FROM employees WHERE department_id = ? AND deleted_at IS NULL`
+
+	var totalCount int64
+	err := r.db.QueryRowContext(ctx, countQuery, departmentID).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count employees: %w", err)
+	}
+
+	query := `
+		SELECT id, name, age, position, department_id, salary, created_at, updated_at, deleted_at
+		FROM employees
+		WHERE department_id = ? AND deleted_at IS NULL
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, departmentID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get employees: %w", err)
+	}
+	defer rows.Close()
+
+	var employees []*models.Employee
+	for rows.Next() {
+		employee := &models.Employee{}
+		err := rows.Scan(
+			&employee.ID,
+			&employee.Name,
+			&employee.Age,
+			&employee.Position,
+			&employee.DepartmentID,
+			&employee.Salary,
+			&employee.CreatedAt,
+			&employee.UpdatedAt,
+			&employee.DeletedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan employee: %w", err)
+		}
+		employees = append(employees, employee)
+	}
+
+	return employees, totalCount, nil
+}
