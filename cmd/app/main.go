@@ -32,10 +32,14 @@ func main() {
 	departmentRepo := repositories.NewMySQLDepartmentRepository(db)
 
 	employeeService := services.NewEmployeeService(employeeRepo, departmentRepo)
+	departmentService := services.NewDepartmentService(departmentRepo)
+	exportService := services.NewExportService(employeeRepo, "./exports")
 
 	employeeHandler := handlers.NewEmployeeHandler(employeeService)
+	departmentHandler := handlers.NewDepartmentHandler(departmentService, employeeService)
+	exportHandler := handlers.NewExportHandler(exportService)
 
-	appRouter := router.NewRouter(employeeHandler)
+	appRouter := router.NewRouter(employeeHandler, departmentHandler, exportHandler)
 	handler := appRouter.SetupRoutes()
 
 	server := &http.Server{
@@ -47,7 +51,6 @@ func main() {
 
 	go func() {
 		log.Printf("Server starting on port %s", cfg.Server.Port)
-		log.Printf("API Endpoints:")
 
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed to start: %v", err)
