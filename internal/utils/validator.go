@@ -53,3 +53,10 @@ func ValidateUpdateEmployeeRequest(req *models.UpdateEmployeeRequest) error {
 	}
 	return nil
 }
+
+func ValidateCreateDepartmentRequest(req *models.CreateDepartmentRequest) error {
+	if strings.TrimSpace(req.Name) == "" {
+		return ErrInvalidName
+	}
+	return nil
+}
